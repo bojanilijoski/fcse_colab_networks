@@ -1,0 +1,737 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/css/tom-select.min.css" integrity="sha512-43fHB3GLgZfz8QXl1RPQ8O66oIgv3po9cJ5erMt1c4QISq9dYb195T3vr5ImnJPXuVroKcGBPXBFKETW8jrPNQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/js/tom-select.complete.js" integrity="sha512-jeF9CfnvzDiw9G9xiksVjxR2lib44Gnovvkv+3CgCG6NXCD4gqlA5nDAVW5WjpA+i+/zKsUWV5xNEbW1X/HH0Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 700px;
+                 background-color: #ffffff;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+             #config {
+                 float: left;
+                 width: 400px;
+                 height: 600px;
+             }
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+                <div id="select-menu" class="card-header">
+                    <div class="row no-gutters">
+                        <div class="col-10 pb-2">
+                            <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="selectNode([value]);"
+                            id="select-node"
+                            placeholder="Select node..."
+                            >
+                                <option selected>Select a Node by ID</option>
+                                
+                                    <option value="Ljupcho Kocarev">Ljupcho Kocarev</option>
+                                
+                                    <option value="Lasko Basnarkov">Lasko Basnarkov</option>
+                                
+                                    <option value="Dimitar Trajanov">Dimitar Trajanov</option>
+                                
+                                    <option value="Igor Mishkovski">Igor Mishkovski</option>
+                                
+                                    <option value="Miroslav Mirchev">Miroslav Mirchev</option>
+                                
+                                    <option value="Smile Markovski">Smile Markovski</option>
+                                
+                                    <option value="Sonja Filiposka">Sonja Filiposka</option>
+                                
+                                    <option value="Vladimir Zdraveski">Vladimir Zdraveski</option>
+                                
+                                    <option value="Aleksandra Dedinec">Aleksandra Dedinec</option>
+                                
+                                    <option value="Slobodan Kalajdziski">Slobodan Kalajdziski</option>
+                                
+                                    <option value="Aleksandra Bogojeska">Aleksandra Bogojeska</option>
+                                
+                                    <option value="Sasho Gramatikov">Sasho Gramatikov</option>
+                                
+                                    <option value="Ilinka Ivanoska">Ilinka Ivanoska</option>
+                                
+                                    <option value="Kire Trivodaliev">Kire Trivodaliev</option>
+                                
+                                    <option value="Kostadin Mishev">Kostadin Mishev</option>
+                                
+                                    <option value="Aleksandar Tenev">Aleksandar Tenev</option>
+                                
+                                    <option value="Marija Mihova">Marija Mihova</option>
+                                
+                                    <option value="Dejan Gjorgjevikj">Dejan Gjorgjevikj</option>
+                                
+                                    <option value="Riste Stojanov">Riste Stojanov</option>
+                                
+                                    <option value="Dancho Davchev">Dancho Davchev</option>
+                                
+                                    <option value="Kosta Mitreski">Kosta Mitreski</option>
+                                
+                                    <option value="Biljana Stojkoska">Biljana Stojkoska</option>
+                                
+                                    <option value="Vesna Dimitrova">Vesna Dimitrova</option>
+                                
+                                    <option value="Ivica Dimitrovski">Ivica Dimitrovski</option>
+                                
+                                    <option value="Natasha Ilievska">Natasha Ilievska</option>
+                                
+                                    <option value="Ivan Kitanovski">Ivan Kitanovski</option>
+                                
+                                    <option value="Bojana Koteska">Bojana Koteska</option>
+                                
+                                    <option value="Andrea Kulakov">Andrea Kulakov</option>
+                                
+                                    <option value="Suzana Loshkovska">Suzana Loshkovska</option>
+                                
+                                    <option value="Ana Madevska Bogdanova">Ana Madevska Bogdanova</option>
+                                
+                                    <option value="Gjorgji Madzarov">Gjorgji Madzarov</option>
+                                
+                                    <option value="Anastas Mishev">Anastas Mishev</option>
+                                
+                                    <option value="Jovana Dobreva">Jovana Dobreva</option>
+                                
+                                    <option value="Monika Simjanoska">Monika Simjanoska</option>
+                                
+                                    <option value="Eftim Zdravevski">Eftim Zdravevski</option>
+                                
+                                    <option value="Dejan Spasov">Dejan Spasov</option>
+                                
+                                    <option value="Petre Lameski">Petre Lameski</option>
+                                
+                                    <option value="Katerina Zdravkova">Katerina Zdravkova</option>
+                                
+                                    <option value="Marjan Gushev">Marjan Gushev</option>
+                                
+                                    <option value="Ivan Chorbev">Ivan Chorbev</option>
+                                
+                                    <option value="Ana Todorovska">Ana Todorovska</option>
+                                
+                                    <option value="Boro Jakimovski">Boro Jakimovski</option>
+                                
+                                    <option value="Verica Bakeva">Verica Bakeva</option>
+                                
+                                    <option value="Dimitar Kitanovski">Dimitar Kitanovski</option>
+                                
+                                    <option value="Smilka Janeska Sarkanjac">Smilka Janeska Sarkanjac</option>
+                                
+                                    <option value="Mile Jovanov">Mile Jovanov</option>
+                                
+                                    <option value="Sashko Ristov">Sashko Ristov</option>
+                                
+                                    <option value="Zhaneta Popeska">Zhaneta Popeska</option>
+                                
+                                    <option value="Vesna Dimitrievska Ristovska">Vesna Dimitrievska Ristovska</option>
+                                
+                                    <option value="Kiril Kjiroski">Kiril Kjiroski</option>
+                                
+                                    <option value="Hristina Mihajloska">Hristina Mihajloska</option>
+                                
+                                    <option value="Magdalena Kostoska">Magdalena Kostoska</option>
+                                
+                                    <option value="Nevena Ackovska">Nevena Ackovska</option>
+                                
+                                    <option value="Simona Samardjiska">Simona Samardjiska</option>
+                                
+                                    <option value="Vojdan Kjorveziroski">Vojdan Kjorveziroski</option>
+                                
+                                    <option value="Vladimir Trajkovikj">Vladimir Trajkovikj</option>
+                                
+                                    <option value="Emil Stankov">Emil Stankov</option>
+                                
+                                    <option value="Jana Kuzmanova">Jana Kuzmanova</option>
+                                
+                                    <option value="Georgina Mircheva">Georgina Mircheva</option>
+                                
+                                    <option value="Jovan Kalajdjieski">Jovan Kalajdjieski</option>
+                                
+                                    <option value="Martina Toshevska">Martina Toshevska</option>
+                                
+                                    <option value="Sonja Gievska">Sonja Gievska</option>
+                                
+                                    <option value="Andreja Naumoski">Andreja Naumoski</option>
+                                
+                                    <option value="Bojan Ilijoski">Bojan Ilijoski</option>
+                                
+                                    <option value="Aleksandar Stojmenski">Aleksandar Stojmenski</option>
+                                
+                                    <option value="Tomche Delev">Tomche Delev</option>
+                                
+                                    <option value="Vangel Ajanovski">Vangel Ajanovski</option>
+                                
+                                    <option value="Dragan Mihajlov">Dragan Mihajlov</option>
+                                
+                                    <option value="Katarina Trojachanec Dineva">Katarina Trojachanec Dineva</option>
+                                
+                                    <option value="Stefan Andonov">Stefan Andonov</option>
+                                
+                                    <option value="Aleksandra Popovska Mitrovikj">Aleksandra Popovska Mitrovikj</option>
+                                
+                                    <option value="Boban Joksimoski">Boban Joksimoski</option>
+                                
+                                    <option value="Ljupcho Antovski">Ljupcho Antovski</option>
+                                
+                                    <option value="Vlatko Spasev">Vlatko Spasev</option>
+                                
+                                    <option value="Goran Velinov">Goran Velinov</option>
+                                
+                                    <option value="Goce Armenski">Goce Armenski</option>
+                                
+                                    <option value="Margita Kon-Popovska">Margita Kon-Popovska</option>
+                                
+                                    <option value="Frosina Stojanovska">Frosina Stojanovska</option>
+                                
+                                    <option value="Vladislav Bidikov">Vladislav Bidikov</option>
+                                
+                                    <option value="Nenad Anchev">Nenad Anchev</option>
+                                
+                                    <option value="Panche Ribarski">Panche Ribarski</option>
+                                
+                                    <option value="Biljana Tojtovska">Biljana Tojtovska</option>
+                                
+                                    <option value="Metodija Jancheski">Metodija Jancheski</option>
+                                
+                                    <option value="Petar Sekoluski">Petar Sekoluski</option>
+                                
+                                    <option value="Igor Trajkovski">Igor Trajkovski</option>
+                                
+                                    <option value="Milosh Jovanovikj">Milosh Jovanovikj</option>
+                                
+                            </select>
+                        </div>
+                        <div class="col-2 pb-2">
+                            <button type="button" class="btn btn-primary btn-block" onclick="neighbourhoodHighlight({nodes: []});">Reset Selection</button>
+                        </div>
+                    </div>
+                </div>
+            
+            
+              <div id="filter-menu" class="card-header">
+                <div class="row no-gutters">
+                  <div class="col-3 pb-2">
+                    <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="updateFilter(value, 'item')"
+                            id="select-item"
+                        >
+                        <option value="">Select a network item</option>
+                        <option value="edge">edge</option>
+                        <option value="node">node</option>
+                    </select>
+                  </div>
+                  <div class="col-3 pb-2">
+                    <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="updateFilter(value, 'property')"
+                            id="select-property"
+                        >
+                        <option value="">Select a property...</option>
+                    </select>
+                  </div>
+                  <div class="col-3 pb-2">
+                    <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            id="select-value"
+                        >
+                        <option value="">Select value(s)...</option>
+                    </select>
+                  </div>
+                  <div class="col-1 pb-2">
+                    <button type="button" class="btn btn-primary btn-block" onclick="highlightFilter(filter);">Filter</button>
+                  </div>
+                  <div class="col-2 pb-2">
+                    <button type="button" class="btn btn-primary btn-block" onclick="clearFilter(true)">Reset Selection</button>
+                  </div>
+                </div>
+              </div>
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+            <div id="config"></div>
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+                  new TomSelect("#select-node",{
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      }
+                  });
+              
+
+              
+                  // explicitly using onItemAdd and this function as we need to save multiple values
+                  let updateValueFilter = function() {
+                      return function () {
+                      filter['value'].push(arguments[0])
+                      }
+                  }
+
+                  let valueControl = new TomSelect("#select-value",{
+                      maxItems: null,
+                      valueField: 'id',
+                      labelField: 'title',
+                      searchField: 'title',
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      },
+                      onItemAdd: updateValueFilter()
+                  });
+
+                  let addValues = function() {
+                      return function () {
+                          // clear the current value options and add the selected attribute values
+                          // tom-select handles duplicates
+                          let selectedProperty = arguments[0];
+                          valueControl.clear();
+                          valueControl.clearOptions();
+                          filter['value'] = []
+                          if (filter['item'] === 'node') {
+                              for (let each in allNodes) {
+                                  valueControl.addOption({
+                                      id:allNodes[each][selectedProperty],
+                                      title:allNodes[each][selectedProperty]
+                                  })
+                              }
+                          }
+                          else if (filter['item'] === 'edge') {
+                              for (let each in allEdges) {
+                                  valueControl.addOption({
+                                      id:allEdges[each][selectedProperty],
+                                      title:allEdges[each][selectedProperty]
+                                  })
+                              }
+                          }
+                      }
+                  };
+
+                  let propControl = new TomSelect("#select-property",{
+                      valueField: 'id',
+                      labelField: 'title',
+                      searchField: 'title',
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      },
+                      onItemAdd: addValues()
+                  });
+
+                  let addProperties = function() {
+                      return function () {
+                          // loops through the selected network item and adds the attributes to dropdown
+                          // tom-select handles duplicates
+                          clearFilter(false)
+                          if (arguments[0] === 'edge') {
+                              for (let each in allEdges) {
+                                  if (allEdges.hasOwnProperty(each)) {
+                                      for (let eachProp in allEdges[each]) {
+                                          if (allEdges[each].hasOwnProperty(eachProp)) {
+                                              propControl.addOption({id: eachProp, title: eachProp})
+                                          }
+                                      }
+                                  }
+                              }
+                          }
+                          else if (arguments[0] === 'node') {
+                              for (let each in allNodes) {
+                                  if (allNodes.hasOwnProperty(each)) {
+                                      for (let eachProp in allNodes[each]) {
+                                          if (allNodes[each].hasOwnProperty(eachProp)
+                                              && (eachProp !== 'hidden' && eachProp !== 'savedLabel'
+                                                  && eachProp !== 'hiddenLabel')) {
+                                              propControl.addOption({id: eachProp, title: eachProp})
+
+                                          }
+                                      }
+                                  }
+                              }
+                          }
+                      }
+                  };
+
+                  let itemControl = new TomSelect("#select-item",{
+                      create: false,
+                      sortField:{
+                          field: "text",
+                          direction: "asc"
+                      },
+                      onItemAdd: addProperties()
+                  });
+
+                  function clearFilter(reset) {
+                      // utility function to clear all the selected filter options
+                      // if reset is set to true, the existing filter will be removed
+                      // else, only the dropdown options are cleared
+                      propControl.clear();
+                      propControl.clearOptions();
+                      valueControl.clear();
+                      valueControl.clearOptions();
+                      filter = {
+                          item : '',
+                          property : '',
+                          value : []
+                      }
+                      if (reset) {
+                          itemControl.clear();
+                          filterHighlight({nodes: []})
+                      }
+                  }
+
+                  function updateFilter(value, key) {
+                      // key could be 'item' or 'property' and value is as selected in dropdown
+                      filter[key] = value
+                  }
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "#94d390", "id": "Ljupcho Kocarev", "label": "Ljupcho Kocarev", "shape": "dot", "size": 20.930232558139533}, {"color": "#e8f6e3", "id": "Lasko Basnarkov", "label": "Lasko Basnarkov", "shape": "dot", "size": 5.813953488372093}, {"color": "#c4e8bd", "id": "Dimitar Trajanov", "label": "Dimitar Trajanov", "shape": "dot", "size": 13.372093023255813}, {"color": "#abdda5", "id": "Igor Mishkovski", "label": "Igor Mishkovski", "shape": "dot", "size": 17.441860465116278}, {"color": "#bae3b3", "id": "Miroslav Mirchev", "label": "Miroslav Mirchev", "shape": "dot", "size": 15.11627906976744}, {"color": "#c1e6ba", "id": "Smile Markovski", "label": "Smile Markovski", "shape": "dot", "size": 13.953488372093023}, {"color": "#8bcf89", "id": "Sonja Filiposka", "label": "Sonja Filiposka", "shape": "dot", "size": 22.093023255813954}, {"color": "#d9f0d3", "id": "Vladimir Zdraveski", "label": "Vladimir Zdraveski", "shape": "dot", "size": 9.30232558139535}, {"color": "#f2faef", "id": "Aleksandra Dedinec", "label": "Aleksandra Dedinec", "shape": "dot", "size": 2.3255813953488373}, {"color": "#a4da9e", "id": "Slobodan Kalajdziski", "label": "Slobodan Kalajdziski", "shape": "dot", "size": 18.6046511627907}, {"color": "#ebf7e7", "id": "Aleksandra Bogojeska", "label": "Aleksandra Bogojeska", "shape": "dot", "size": 4.651162790697675}, {"color": "#bde5b6", "id": "Sasho Gramatikov", "label": "Sasho Gramatikov", "shape": "dot", "size": 14.534883720930234}, {"color": "#bde5b6", "id": "Ilinka Ivanoska", "label": "Ilinka Ivanoska", "shape": "dot", "size": 14.534883720930234}, {"color": "#d3eecd", "id": "Kire Trivodaliev", "label": "Kire Trivodaliev", "shape": "dot", "size": 10.465116279069766}, {"color": "#d3eecd", "id": "Kostadin Mishev", "label": "Kostadin Mishev", "shape": "dot", "size": 10.465116279069766}, {"color": "#eff9eb", "id": "Aleksandar Tenev", "label": "Aleksandar Tenev", "shape": "dot", "size": 3.488372093023256}, {"color": "#d9f0d3", "id": "Marija Mihova", "label": "Marija Mihova", "shape": "dot", "size": 9.30232558139535}, {"color": "#bae3b3", "id": "Dejan Gjorgjevikj", "label": "Dejan Gjorgjevikj", "shape": "dot", "size": 15.11627906976744}, {"color": "#e4f5df", "id": "Riste Stojanov", "label": "Riste Stojanov", "shape": "dot", "size": 6.976744186046512}, {"color": "#e8f6e3", "id": "Dancho Davchev", "label": "Dancho Davchev", "shape": "dot", "size": 5.813953488372093}, {"color": "#b6e2af", "id": "Kosta Mitreski", "label": "Kosta Mitreski", "shape": "dot", "size": 15.69767441860465}, {"color": "#e4f5df", "id": "Biljana Stojkoska", "label": "Biljana Stojkoska", "shape": "dot", "size": 6.976744186046512}, {"color": "#90d18d", "id": "Vesna Dimitrova", "label": "Vesna Dimitrova", "shape": "dot", "size": 21.511627906976745}, {"color": "#a4da9e", "id": "Ivica Dimitrovski", "label": "Ivica Dimitrovski", "shape": "dot", "size": 18.6046511627907}, {"color": "#c8e9c1", "id": "Natasha Ilievska", "label": "Natasha Ilievska", "shape": "dot", "size": 12.790697674418606}, {"color": "#b6e2af", "id": "Ivan Kitanovski", "label": "Ivan Kitanovski", "shape": "dot", "size": 15.69767441860465}, {"color": "#87cd86", "id": "Bojana Koteska", "label": "Bojana Koteska", "shape": "dot", "size": 22.674418604651162}, {"color": "#8bcf89", "id": "Andrea Kulakov", "label": "Andrea Kulakov", "shape": "dot", "size": 22.093023255813954}, {"color": "#d0edca", "id": "Suzana Loshkovska", "label": "Suzana Loshkovska", "shape": "dot", "size": 11.046511627906977}, {"color": "#98d594", "id": "Ana Madevska Bogdanova", "label": "Ana Madevska Bogdanova", "shape": "dot", "size": 20.348837209302324}, {"color": "#bae3b3", "id": "Gjorgji Madzarov", "label": "Gjorgji Madzarov", "shape": "dot", "size": 15.11627906976744}, {"color": "#8bcf89", "id": "Anastas Mishev", "label": "Anastas Mishev", "shape": "dot", "size": 22.093023255813954}, {"color": "#e6f5e1", "id": "Jovana Dobreva", "label": "Jovana Dobreva", "shape": "dot", "size": 6.395348837209303}, {"color": "#d6efd0", "id": "Monika Simjanoska", "label": "Monika Simjanoska", "shape": "dot", "size": 9.883720930232558}, {"color": "#bae3b3", "id": "Eftim Zdravevski", "label": "Eftim Zdravevski", "shape": "dot", "size": 15.11627906976744}, {"color": "#e9f7e5", "id": "Dejan Spasov", "label": "Dejan Spasov", "shape": "dot", "size": 5.232558139534883}, {"color": "#a4da9e", "id": "Petre Lameski", "label": "Petre Lameski", "shape": "dot", "size": 18.6046511627907}, {"color": "#e9f7e5", "id": "Katerina Zdravkova", "label": "Katerina Zdravkova", "shape": "dot", "size": 5.232558139534883}, {"color": "#cbeac4", "id": "Marjan Gushev", "label": "Marjan Gushev", "shape": "dot", "size": 12.209302325581394}, {"color": "#8bcf89", "id": "Ivan Chorbev", "label": "Ivan Chorbev", "shape": "dot", "size": 22.093023255813954}, {"color": "#f4fbf1", "id": "Ana Todorovska", "label": "Ana Todorovska", "shape": "dot", "size": 1.744186046511628}, {"color": "#bae3b3", "id": "Boro Jakimovski", "label": "Boro Jakimovski", "shape": "dot", "size": 15.11627906976744}, {"color": "#bde5b6", "id": "Verica Bakeva", "label": "Verica Bakeva", "shape": "dot", "size": 14.534883720930234}, {"color": "#e9f7e5", "id": "Dimitar Kitanovski", "label": "Dimitar Kitanovski", "shape": "dot", "size": 5.232558139534883}, {"color": "#f4fbf1", "id": "Smilka Janeska Sarkanjac", "label": "Smilka Janeska Sarkanjac", "shape": "dot", "size": 1.744186046511628}, {"color": "#cbeac4", "id": "Mile Jovanov", "label": "Mile Jovanov", "shape": "dot", "size": 12.209302325581394}, {"color": "#c1e6ba", "id": "Sashko Ristov", "label": "Sashko Ristov", "shape": "dot", "size": 13.953488372093023}, {"color": "#dbf1d6", "id": "Zhaneta Popeska", "label": "Zhaneta Popeska", "shape": "dot", "size": 8.720930232558139}, {"color": "#d0edca", "id": "Vesna Dimitrievska Ristovska", "label": "Vesna Dimitrievska Ristovska", "shape": "dot", "size": 11.046511627906977}, {"color": "#bde5b6", "id": "Kiril Kjiroski", "label": "Kiril Kjiroski", "shape": "dot", "size": 14.534883720930234}, {"color": "#c8e9c1", "id": "Hristina Mihajloska", "label": "Hristina Mihajloska", "shape": "dot", "size": 12.790697674418606}, {"color": "#d9f0d3", "id": "Magdalena Kostoska", "label": "Magdalena Kostoska", "shape": "dot", "size": 9.30232558139535}, {"color": "#cbeac4", "id": "Nevena Ackovska", "label": "Nevena Ackovska", "shape": "dot", "size": 12.209302325581394}, {"color": "#f2faef", "id": "Simona Samardjiska", "label": "Simona Samardjiska", "shape": "dot", "size": 2.3255813953488373}, {"color": "#f0f9ed", "id": "Vojdan Kjorveziroski", "label": "Vojdan Kjorveziroski", "shape": "dot", "size": 2.9069767441860463}, {"color": "#cbeac4", "id": "Vladimir Trajkovikj", "label": "Vladimir Trajkovikj", "shape": "dot", "size": 12.209302325581394}, {"color": "#d6efd0", "id": "Emil Stankov", "label": "Emil Stankov", "shape": "dot", "size": 9.883720930232558}, {"color": "#f5fbf3", "id": "Jana Kuzmanova", "label": "Jana Kuzmanova", "shape": "dot", "size": 1.1627906976744187}, {"color": "#ebf7e7", "id": "Georgina Mircheva", "label": "Georgina Mircheva", "shape": "dot", "size": 4.651162790697675}, {"color": "#e8f6e3", "id": "Jovan Kalajdjieski", "label": "Jovan Kalajdjieski", "shape": "dot", "size": 5.813953488372093}, {"color": "#e9f7e5", "id": "Martina Toshevska", "label": "Martina Toshevska", "shape": "dot", "size": 5.232558139534883}, {"color": "#e6f5e1", "id": "Sonja Gievska", "label": "Sonja Gievska", "shape": "dot", "size": 6.395348837209303}, {"color": "#e9f7e5", "id": "Andreja Naumoski", "label": "Andreja Naumoski", "shape": "dot", "size": 5.232558139534883}, {"color": "#d9f0d3", "id": "Bojan Ilijoski", "label": "Bojan Ilijoski", "shape": "dot", "size": 9.30232558139535}, {"color": "#d6efd0", "id": "Aleksandar Stojmenski", "label": "Aleksandar Stojmenski", "shape": "dot", "size": 9.883720930232558}, {"color": "#f0f9ed", "id": "Tomche Delev", "label": "Tomche Delev", "shape": "dot", "size": 2.9069767441860463}, {"color": "#eff9eb", "id": "Vangel Ajanovski", "label": "Vangel Ajanovski", "shape": "dot", "size": 3.488372093023256}, {"color": "#edf8e9", "id": "Dragan Mihajlov", "label": "Dragan Mihajlov", "shape": "dot", "size": 4.069767441860465}, {"color": "#ebf7e7", "id": "Katarina Trojachanec Dineva", "label": "Katarina Trojachanec Dineva", "shape": "dot", "size": 4.651162790697675}, {"color": "#ebf7e7", "id": "Stefan Andonov", "label": "Stefan Andonov", "shape": "dot", "size": 4.651162790697675}, {"color": "#f0f9ed", "id": "Aleksandra Popovska Mitrovikj", "label": "Aleksandra Popovska Mitrovikj", "shape": "dot", "size": 2.9069767441860463}, {"color": "#e9f7e5", "id": "Boban Joksimoski", "label": "Boban Joksimoski", "shape": "dot", "size": 5.232558139534883}, {"color": "#edf8e9", "id": "Ljupcho Antovski", "label": "Ljupcho Antovski", "shape": "dot", "size": 4.069767441860465}, {"color": "#f4fbf1", "id": "Vlatko Spasev", "label": "Vlatko Spasev", "shape": "dot", "size": 1.744186046511628}, {"color": "#e8f6e3", "id": "Goran Velinov", "label": "Goran Velinov", "shape": "dot", "size": 5.813953488372093}, {"color": "#e4f5df", "id": "Goce Armenski", "label": "Goce Armenski", "shape": "dot", "size": 6.976744186046512}, {"color": "#edf8e9", "id": "Margita Kon-Popovska", "label": "Margita Kon-Popovska", "shape": "dot", "size": 4.069767441860465}, {"color": "#ebf7e7", "id": "Frosina Stojanovska", "label": "Frosina Stojanovska", "shape": "dot", "size": 4.651162790697675}, {"color": "#e9f7e5", "id": "Vladislav Bidikov", "label": "Vladislav Bidikov", "shape": "dot", "size": 5.232558139534883}, {"color": "#f0f9ed", "id": "Nenad Anchev", "label": "Nenad Anchev", "shape": "dot", "size": 2.9069767441860463}, {"color": "#eff9eb", "id": "Panche Ribarski", "label": "Panche Ribarski", "shape": "dot", "size": 3.488372093023256}, {"color": "#f2faef", "id": "Biljana Tojtovska", "label": "Biljana Tojtovska", "shape": "dot", "size": 2.3255813953488373}, {"color": "#f2faef", "id": "Metodija Jancheski", "label": "Metodija Jancheski", "shape": "dot", "size": 2.3255813953488373}, {"color": "#f4fbf1", "id": "Petar Sekoluski", "label": "Petar Sekoluski", "shape": "dot", "size": 1.744186046511628}, {"color": "#f7fcf5", "id": "Igor Trajkovski", "label": "Igor Trajkovski", "shape": "dot", "size": 0.5813953488372093}, {"color": "#f7fcf5", "id": "Milosh Jovanovikj", "label": "Milosh Jovanovikj", "shape": "dot", "size": 0.5813953488372093}]);
+                  edges = new vis.DataSet([{"from": "Ljupcho Kocarev", "to": "Lasko Basnarkov", "width": 36}, {"from": "Ljupcho Kocarev", "to": "Dimitar Trajanov", "width": 24}, {"from": "Ljupcho Kocarev", "to": "Igor Mishkovski", "width": 23}, {"from": "Ljupcho Kocarev", "to": "Miroslav Mirchev", "width": 17}, {"from": "Ljupcho Kocarev", "to": "Smile Markovski", "width": 15}, {"from": "Ljupcho Kocarev", "to": "Sonja Filiposka", "width": 13}, {"from": "Ljupcho Kocarev", "to": "Vladimir Zdraveski", "width": 13}, {"from": "Ljupcho Kocarev", "to": "Aleksandra Dedinec", "width": 12}, {"from": "Ljupcho Kocarev", "to": "Slobodan Kalajdziski", "width": 10}, {"from": "Ljupcho Kocarev", "to": "Aleksandra Bogojeska", "width": 10}, {"from": "Ljupcho Kocarev", "to": "Sasho Gramatikov", "width": 6}, {"from": "Ljupcho Kocarev", "to": "Ilinka Ivanoska", "width": 5}, {"from": "Ljupcho Kocarev", "to": "Kire Trivodaliev", "width": 5}, {"from": "Ljupcho Kocarev", "to": "Kostadin Mishev", "width": 4}, {"from": "Ljupcho Kocarev", "to": "Aleksandar Tenev", "width": 4}, {"from": "Ljupcho Kocarev", "to": "Marija Mihova", "width": 4}, {"from": "Ljupcho Kocarev", "to": "Dejan Gjorgjevikj", "width": 3}, {"from": "Ljupcho Kocarev", "to": "Riste Stojanov", "width": 3}, {"from": "Ljupcho Kocarev", "to": "Dancho Davchev", "width": 3}, {"from": "Ljupcho Kocarev", "to": "Kosta Mitreski", "width": 3}, {"from": "Ljupcho Kocarev", "to": "Biljana Stojkoska", "width": 3}, {"from": "Ljupcho Kocarev", "to": "Vesna Dimitrova", "width": 2}, {"from": "Ljupcho Kocarev", "to": "Ivica Dimitrovski", "width": 2}, {"from": "Ljupcho Kocarev", "to": "Natasha Ilievska", "width": 2}, {"from": "Ljupcho Kocarev", "to": "Ivan Kitanovski", "width": 2}, {"from": "Ljupcho Kocarev", "to": "Bojana Koteska", "width": 2}, {"from": "Ljupcho Kocarev", "to": "Andrea Kulakov", "width": 2}, {"from": "Ljupcho Kocarev", "to": "Suzana Loshkovska", "width": 2}, {"from": "Ljupcho Kocarev", "to": "Ana Madevska Bogdanova", "width": 2}, {"from": "Ljupcho Kocarev", "to": "Gjorgji Madzarov", "width": 2}, {"from": "Ljupcho Kocarev", "to": "Anastas Mishev", "width": 2}, {"from": "Ljupcho Kocarev", "to": "Jovana Dobreva", "width": 2}, {"from": "Ljupcho Kocarev", "to": "Monika Simjanoska", "width": 2}, {"from": "Ljupcho Kocarev", "to": "Eftim Zdravevski", "width": 2}, {"from": "Ljupcho Kocarev", "to": "Dejan Spasov", "width": 2}, {"from": "Lasko Basnarkov", "to": "Eftim Zdravevski", "width": 2}, {"from": "Lasko Basnarkov", "to": "Petre Lameski", "width": 2}, {"from": "Lasko Basnarkov", "to": "Igor Mishkovski", "width": 3}, {"from": "Lasko Basnarkov", "to": "Katerina Zdravkova", "width": 2}, {"from": "Lasko Basnarkov", "to": "Vladimir Zdraveski", "width": 4}, {"from": "Lasko Basnarkov", "to": "Biljana Stojkoska", "width": 2}, {"from": "Lasko Basnarkov", "to": "Miroslav Mirchev", "width": 9}, {"from": "Lasko Basnarkov", "to": "Marjan Gushev", "width": 2}, {"from": "Dimitar Trajanov", "to": "Eftim Zdravevski", "width": 8}, {"from": "Dimitar Trajanov", "to": "Sonja Filiposka", "width": 60}, {"from": "Dimitar Trajanov", "to": "Petre Lameski", "width": 8}, {"from": "Dimitar Trajanov", "to": "Ivan Chorbev", "width": 4}, {"from": "Dimitar Trajanov", "to": "Riste Stojanov", "width": 46}, {"from": "Dimitar Trajanov", "to": "Vladimir Zdraveski", "width": 33}, {"from": "Dimitar Trajanov", "to": "Igor Mishkovski", "width": 27}, {"from": "Dimitar Trajanov", "to": "Kostadin Mishev", "width": 26}, {"from": "Dimitar Trajanov", "to": "Sasho Gramatikov", "width": 19}, {"from": "Dimitar Trajanov", "to": "Ana Todorovska", "width": 10}, {"from": "Dimitar Trajanov", "to": "Jovana Dobreva", "width": 8}, {"from": "Dimitar Trajanov", "to": "Andrea Kulakov", "width": 4}, {"from": "Dimitar Trajanov", "to": "Monika Simjanoska", "width": 4}, {"from": "Dimitar Trajanov", "to": "Boro Jakimovski", "width": 3}, {"from": "Dimitar Trajanov", "to": "Aleksandra Bogojeska", "width": 3}, {"from": "Dimitar Trajanov", "to": "Verica Bakeva", "width": 3}, {"from": "Dimitar Trajanov", "to": "Miroslav Mirchev", "width": 3}, {"from": "Dimitar Trajanov", "to": "Dimitar Kitanovski", "width": 3}, {"from": "Dimitar Trajanov", "to": "Smilka Janeska Sarkanjac", "width": 2}, {"from": "Dimitar Trajanov", "to": "Kosta Mitreski", "width": 2}, {"from": "Dimitar Trajanov", "to": "Mile Jovanov", "width": 2}, {"from": "Igor Mishkovski", "to": "Sashko Ristov", "width": 2}, {"from": "Igor Mishkovski", "to": "Sonja Filiposka", "width": 23}, {"from": "Igor Mishkovski", "to": "Petre Lameski", "width": 3}, {"from": "Igor Mishkovski", "to": "Ivan Chorbev", "width": 4}, {"from": "Igor Mishkovski", "to": "Bojana Koteska", "width": 3}, {"from": "Igor Mishkovski", "to": "Anastas Mishev", "width": 3}, {"from": "Igor Mishkovski", "to": "Andrea Kulakov", "width": 2}, {"from": "Igor Mishkovski", "to": "Ana Madevska Bogdanova", "width": 3}, {"from": "Igor Mishkovski", "to": "Vesna Dimitrova", "width": 3}, {"from": "Igor Mishkovski", "to": "Ivica Dimitrovski", "width": 2}, {"from": "Igor Mishkovski", "to": "Kosta Mitreski", "width": 2}, {"from": "Igor Mishkovski", "to": "Miroslav Mirchev", "width": 24}, {"from": "Igor Mishkovski", "to": "Sasho Gramatikov", "width": 14}, {"from": "Igor Mishkovski", "to": "Riste Stojanov", "width": 7}, {"from": "Igor Mishkovski", "to": "Ivan Kitanovski", "width": 4}, {"from": "Igor Mishkovski", "to": "Kostadin Mishev", "width": 4}, {"from": "Igor Mishkovski", "to": "Aleksandra Bogojeska", "width": 4}, {"from": "Igor Mishkovski", "to": "Zhaneta Popeska", "width": 2}, {"from": "Igor Mishkovski", "to": "Verica Bakeva", "width": 2}, {"from": "Igor Mishkovski", "to": "Vesna Dimitrievska Ristovska", "width": 2}, {"from": "Igor Mishkovski", "to": "Kiril Kjiroski", "width": 2}, {"from": "Igor Mishkovski", "to": "Smile Markovski", "width": 2}, {"from": "Igor Mishkovski", "to": "Hristina Mihajloska", "width": 2}, {"from": "Igor Mishkovski", "to": "Gjorgji Madzarov", "width": 2}, {"from": "Igor Mishkovski", "to": "Dimitar Kitanovski", "width": 2}, {"from": "Igor Mishkovski", "to": "Slobodan Kalajdziski", "width": 2}, {"from": "Miroslav Mirchev", "to": "Sonja Filiposka", "width": 4}, {"from": "Miroslav Mirchev", "to": "Ivan Chorbev", "width": 2}, {"from": "Miroslav Mirchev", "to": "Bojana Koteska", "width": 2}, {"from": "Miroslav Mirchev", "to": "Anastas Mishev", "width": 2}, {"from": "Miroslav Mirchev", "to": "Andrea Kulakov", "width": 2}, {"from": "Miroslav Mirchev", "to": "Ana Madevska Bogdanova", "width": 2}, {"from": "Miroslav Mirchev", "to": "Vesna Dimitrova", "width": 2}, {"from": "Miroslav Mirchev", "to": "Ivica Dimitrovski", "width": 2}, {"from": "Miroslav Mirchev", "to": "Slobodan Kalajdziski", "width": 2}, {"from": "Miroslav Mirchev", "to": "Ilinka Ivanoska", "width": 2}, {"from": "Miroslav Mirchev", "to": "Sasho Gramatikov", "width": 6}, {"from": "Miroslav Mirchev", "to": "Magdalena Kostoska", "width": 2}, {"from": "Miroslav Mirchev", "to": "Dejan Gjorgjevikj", "width": 2}, {"from": "Miroslav Mirchev", "to": "Ivan Kitanovski", "width": 2}, {"from": "Miroslav Mirchev", "to": "Gjorgji Madzarov", "width": 2}, {"from": "Miroslav Mirchev", "to": "Vladimir Zdraveski", "width": 2}, {"from": "Miroslav Mirchev", "to": "Natasha Ilievska", "width": 2}, {"from": "Miroslav Mirchev", "to": "Suzana Loshkovska", "width": 2}, {"from": "Miroslav Mirchev", "to": "Dimitar Kitanovski", "width": 2}, {"from": "Miroslav Mirchev", "to": "Marjan Gushev", "width": 2}, {"from": "Miroslav Mirchev", "to": "Aleksandra Bogojeska", "width": 2}, {"from": "Smile Markovski", "to": "Sonja Filiposka", "width": 2}, {"from": "Smile Markovski", "to": "Ivan Chorbev", "width": 2}, {"from": "Smile Markovski", "to": "Bojana Koteska", "width": 3}, {"from": "Smile Markovski", "to": "Anastas Mishev", "width": 2}, {"from": "Smile Markovski", "to": "Andrea Kulakov", "width": 2}, {"from": "Smile Markovski", "to": "Nevena Ackovska", "width": 5}, {"from": "Smile Markovski", "to": "Ana Madevska Bogdanova", "width": 2}, {"from": "Smile Markovski", "to": "Vesna Dimitrova", "width": 20}, {"from": "Smile Markovski", "to": "Ivica Dimitrovski", "width": 2}, {"from": "Smile Markovski", "to": "Kosta Mitreski", "width": 2}, {"from": "Smile Markovski", "to": "Verica Bakeva", "width": 21}, {"from": "Smile Markovski", "to": "Marija Mihova", "width": 9}, {"from": "Smile Markovski", "to": "Mile Jovanov", "width": 6}, {"from": "Smile Markovski", "to": "Natasha Ilievska", "width": 6}, {"from": "Smile Markovski", "to": "Hristina Mihajloska", "width": 3}, {"from": "Smile Markovski", "to": "Simona Samardjiska", "width": 3}, {"from": "Smile Markovski", "to": "Boro Jakimovski", "width": 3}, {"from": "Smile Markovski", "to": "Vesna Dimitrievska Ristovska", "width": 2}, {"from": "Smile Markovski", "to": "Sasho Gramatikov", "width": 2}, {"from": "Smile Markovski", "to": "Ivan Kitanovski", "width": 2}, {"from": "Smile Markovski", "to": "Kiril Kjiroski", "width": 2}, {"from": "Sonja Filiposka", "to": "Eftim Zdravevski", "width": 5}, {"from": "Sonja Filiposka", "to": "Sashko Ristov", "width": 2}, {"from": "Sonja Filiposka", "to": "Anastas Mishev", "width": 35}, {"from": "Sonja Filiposka", "to": "Vojdan Kjorveziroski", "width": 14}, {"from": "Sonja Filiposka", "to": "Sasho Gramatikov", "width": 8}, {"from": "Sonja Filiposka", "to": "Petre Lameski", "width": 8}, {"from": "Sonja Filiposka", "to": "Vladimir Trajkovikj", "width": 7}, {"from": "Sonja Filiposka", "to": "Andrea Kulakov", "width": 7}, {"from": "Sonja Filiposka", "to": "Aleksandra Dedinec", "width": 6}, {"from": "Sonja Filiposka", "to": "Vladimir Zdraveski", "width": 5}, {"from": "Sonja Filiposka", "to": "Boro Jakimovski", "width": 4}, {"from": "Sonja Filiposka", "to": "Vesna Dimitrova", "width": 4}, {"from": "Sonja Filiposka", "to": "Bojana Koteska", "width": 4}, {"from": "Sonja Filiposka", "to": "Ana Madevska Bogdanova", "width": 4}, {"from": "Sonja Filiposka", "to": "Riste Stojanov", "width": 4}, {"from": "Sonja Filiposka", "to": "Ivica Dimitrovski", "width": 3}, {"from": "Sonja Filiposka", "to": "Ivan Kitanovski", "width": 3}, {"from": "Sonja Filiposka", "to": "Aleksandra Bogojeska", "width": 3}, {"from": "Sonja Filiposka", "to": "Kostadin Mishev", "width": 2}, {"from": "Sonja Filiposka", "to": "Dejan Gjorgjevikj", "width": 2}, {"from": "Sonja Filiposka", "to": "Natasha Ilievska", "width": 2}, {"from": "Sonja Filiposka", "to": "Ilinka Ivanoska", "width": 2}, {"from": "Sonja Filiposka", "to": "Slobodan Kalajdziski", "width": 2}, {"from": "Sonja Filiposka", "to": "Suzana Loshkovska", "width": 2}, {"from": "Sonja Filiposka", "to": "Gjorgji Madzarov", "width": 2}, {"from": "Sonja Filiposka", "to": "Zhaneta Popeska", "width": 2}, {"from": "Sonja Filiposka", "to": "Verica Bakeva", "width": 2}, {"from": "Sonja Filiposka", "to": "Ivan Chorbev", "width": 2}, {"from": "Sonja Filiposka", "to": "Vesna Dimitrievska Ristovska", "width": 2}, {"from": "Sonja Filiposka", "to": "Kiril Kjiroski", "width": 2}, {"from": "Sonja Filiposka", "to": "Hristina Mihajloska", "width": 2}, {"from": "Sonja Filiposka", "to": "Kosta Mitreski", "width": 2}, {"from": "Vladimir Zdraveski", "to": "Sashko Ristov", "width": 2}, {"from": "Vladimir Zdraveski", "to": "Nevena Ackovska", "width": 2}, {"from": "Vladimir Zdraveski", "to": "Mile Jovanov", "width": 2}, {"from": "Vladimir Zdraveski", "to": "Magdalena Kostoska", "width": 4}, {"from": "Vladimir Zdraveski", "to": "Riste Stojanov", "width": 15}, {"from": "Vladimir Zdraveski", "to": "Marjan Gushev", "width": 4}, {"from": "Vladimir Zdraveski", "to": "Kostadin Mishev", "width": 3}, {"from": "Vladimir Zdraveski", "to": "Emil Stankov", "width": 2}, {"from": "Vladimir Zdraveski", "to": "Dejan Spasov", "width": 2}, {"from": "Vladimir Zdraveski", "to": "Jana Kuzmanova", "width": 2}, {"from": "Aleksandra Dedinec", "to": "Anastas Mishev", "width": 4}, {"from": "Slobodan Kalajdziski", "to": "Eftim Zdravevski", "width": 7}, {"from": "Slobodan Kalajdziski", "to": "Petre Lameski", "width": 6}, {"from": "Slobodan Kalajdziski", "to": "Bojana Koteska", "width": 2}, {"from": "Slobodan Kalajdziski", "to": "Anastas Mishev", "width": 2}, {"from": "Slobodan Kalajdziski", "to": "Georgina Mircheva", "width": 2}, {"from": "Slobodan Kalajdziski", "to": "Andrea Kulakov", "width": 8}, {"from": "Slobodan Kalajdziski", "to": "Nevena Ackovska", "width": 4}, {"from": "Slobodan Kalajdziski", "to": "Ana Madevska Bogdanova", "width": 2}, {"from": "Slobodan Kalajdziski", "to": "Vesna Dimitrova", "width": 2}, {"from": "Slobodan Kalajdziski", "to": "Ivica Dimitrovski", "width": 4}, {"from": "Slobodan Kalajdziski", "to": "Monika Simjanoska", "width": 2}, {"from": "Slobodan Kalajdziski", "to": "Mile Jovanov", "width": 4}, {"from": "Slobodan Kalajdziski", "to": "Kire Trivodaliev", "width": 39}, {"from": "Slobodan Kalajdziski", "to": "Ilinka Ivanoska", "width": 20}, {"from": "Slobodan Kalajdziski", "to": "Biljana Stojkoska", "width": 12}, {"from": "Slobodan Kalajdziski", "to": "Dancho Davchev", "width": 7}, {"from": "Slobodan Kalajdziski", "to": "Suzana Loshkovska", "width": 6}, {"from": "Slobodan Kalajdziski", "to": "Jovan Kalajdjieski", "width": 5}, {"from": "Slobodan Kalajdziski", "to": "Aleksandra Bogojeska", "width": 5}, {"from": "Slobodan Kalajdziski", "to": "Ivan Kitanovski", "width": 4}, {"from": "Slobodan Kalajdziski", "to": "Dejan Gjorgjevikj", "width": 3}, {"from": "Slobodan Kalajdziski", "to": "Martina Toshevska", "width": 3}, {"from": "Slobodan Kalajdziski", "to": "Sonja Gievska", "width": 3}, {"from": "Slobodan Kalajdziski", "to": "Natasha Ilievska", "width": 2}, {"from": "Slobodan Kalajdziski", "to": "Gjorgji Madzarov", "width": 2}, {"from": "Slobodan Kalajdziski", "to": "Marija Mihova", "width": 2}, {"from": "Slobodan Kalajdziski", "to": "Aleksandar Tenev", "width": 2}, {"from": "Aleksandra Bogojeska", "to": "Kire Trivodaliev", "width": 3}, {"from": "Sasho Gramatikov", "to": "Eftim Zdravevski", "width": 2}, {"from": "Sasho Gramatikov", "to": "Petre Lameski", "width": 2}, {"from": "Sasho Gramatikov", "to": "Ivan Chorbev", "width": 2}, {"from": "Sasho Gramatikov", "to": "Bojana Koteska", "width": 2}, {"from": "Sasho Gramatikov", "to": "Anastas Mishev", "width": 2}, {"from": "Sasho Gramatikov", "to": "Andrea Kulakov", "width": 2}, {"from": "Sasho Gramatikov", "to": "Ana Madevska Bogdanova", "width": 2}, {"from": "Sasho Gramatikov", "to": "Vesna Dimitrova", "width": 2}, {"from": "Sasho Gramatikov", "to": "Ivica Dimitrovski", "width": 2}, {"from": "Sasho Gramatikov", "to": "Kosta Mitreski", "width": 3}, {"from": "Sasho Gramatikov", "to": "Hristina Mihajloska", "width": 2}, {"from": "Sasho Gramatikov", "to": "Riste Stojanov", "width": 8}, {"from": "Sasho Gramatikov", "to": "Ivan Kitanovski", "width": 4}, {"from": "Sasho Gramatikov", "to": "Ana Todorovska", "width": 3}, {"from": "Sasho Gramatikov", "to": "Verica Bakeva", "width": 2}, {"from": "Sasho Gramatikov", "to": "Vesna Dimitrievska Ristovska", "width": 2}, {"from": "Sasho Gramatikov", "to": "Kiril Kjiroski", "width": 2}, {"from": "Sasho Gramatikov", "to": "Magdalena Kostoska", "width": 2}, {"from": "Ilinka Ivanoska", "to": "Andreja Naumoski", "width": 3}, {"from": "Ilinka Ivanoska", "to": "Bojana Koteska", "width": 2}, {"from": "Ilinka Ivanoska", "to": "Anastas Mishev", "width": 2}, {"from": "Ilinka Ivanoska", "to": "Georgina Mircheva", "width": 2}, {"from": "Ilinka Ivanoska", "to": "Andrea Kulakov", "width": 3}, {"from": "Ilinka Ivanoska", "to": "Ana Madevska Bogdanova", "width": 2}, {"from": "Ilinka Ivanoska", "to": "Vesna Dimitrova", "width": 2}, {"from": "Ilinka Ivanoska", "to": "Ivica Dimitrovski", "width": 2}, {"from": "Ilinka Ivanoska", "to": "Kire Trivodaliev", "width": 18}, {"from": "Ilinka Ivanoska", "to": "Biljana Stojkoska", "width": 6}, {"from": "Ilinka Ivanoska", "to": "Dancho Davchev", "width": 4}, {"from": "Ilinka Ivanoska", "to": "Dejan Gjorgjevikj", "width": 2}, {"from": "Ilinka Ivanoska", "to": "Natasha Ilievska", "width": 2}, {"from": "Ilinka Ivanoska", "to": "Ivan Kitanovski", "width": 2}, {"from": "Ilinka Ivanoska", "to": "Suzana Loshkovska", "width": 2}, {"from": "Ilinka Ivanoska", "to": "Gjorgji Madzarov", "width": 2}, {"from": "Ilinka Ivanoska", "to": "Sonja Gievska", "width": 2}, {"from": "Ilinka Ivanoska", "to": "Marija Mihova", "width": 2}, {"from": "Ilinka Ivanoska", "to": "Bojan Ilijoski", "width": 2}, {"from": "Ilinka Ivanoska", "to": "Emil Stankov", "width": 2}, {"from": "Kire Trivodaliev", "to": "Petre Lameski", "width": 2}, {"from": "Kire Trivodaliev", "to": "Andreja Naumoski", "width": 2}, {"from": "Kire Trivodaliev", "to": "Georgina Mircheva", "width": 2}, {"from": "Kire Trivodaliev", "to": "Andrea Kulakov", "width": 3}, {"from": "Kire Trivodaliev", "to": "Kosta Mitreski", "width": 2}, {"from": "Kire Trivodaliev", "to": "Mile Jovanov", "width": 4}, {"from": "Kire Trivodaliev", "to": "Biljana Stojkoska", "width": 19}, {"from": "Kire Trivodaliev", "to": "Dancho Davchev", "width": 7}, {"from": "Kire Trivodaliev", "to": "Jovan Kalajdjieski", "width": 6}, {"from": "Kire Trivodaliev", "to": "Marija Mihova", "width": 5}, {"from": "Kire Trivodaliev", "to": "Sonja Gievska", "width": 4}, {"from": "Kire Trivodaliev", "to": "Bojan Ilijoski", "width": 2}, {"from": "Kire Trivodaliev", "to": "Emil Stankov", "width": 2}, {"from": "Kostadin Mishev", "to": "Eftim Zdravevski", "width": 4}, {"from": "Kostadin Mishev", "to": "Ivan Chorbev", "width": 3}, {"from": "Kostadin Mishev", "to": "Anastas Mishev", "width": 2}, {"from": "Kostadin Mishev", "to": "Vesna Dimitrova", "width": 3}, {"from": "Kostadin Mishev", "to": "Ivica Dimitrovski", "width": 2}, {"from": "Kostadin Mishev", "to": "Kosta Mitreski", "width": 2}, {"from": "Kostadin Mishev", "to": "Boro Jakimovski", "width": 2}, {"from": "Kostadin Mishev", "to": "Monika Simjanoska", "width": 11}, {"from": "Kostadin Mishev", "to": "Riste Stojanov", "width": 6}, {"from": "Kostadin Mishev", "to": "Aleksandar Stojmenski", "width": 3}, {"from": "Kostadin Mishev", "to": "Jovana Dobreva", "width": 2}, {"from": "Kostadin Mishev", "to": "Dimitar Kitanovski", "width": 2}, {"from": "Aleksandar Tenev", "to": "Dejan Gjorgjevikj", "width": 3}, {"from": "Aleksandar Tenev", "to": "Gjorgji Madzarov", "width": 2}, {"from": "Aleksandar Tenev", "to": "Tomche Delev", "width": 2}, {"from": "Marija Mihova", "to": "Sashko Ristov", "width": 3}, {"from": "Marija Mihova", "to": "Bojana Koteska", "width": 2}, {"from": "Marija Mihova", "to": "Nevena Ackovska", "width": 9}, {"from": "Marija Mihova", "to": "Mile Jovanov", "width": 28}, {"from": "Marija Mihova", "to": "Emil Stankov", "width": 18}, {"from": "Marija Mihova", "to": "Zhaneta Popeska", "width": 7}, {"from": "Marija Mihova", "to": "Bojan Ilijoski", "width": 5}, {"from": "Marija Mihova", "to": "Vangel Ajanovski", "width": 4}, {"from": "Marija Mihova", "to": "Biljana Stojkoska", "width": 3}, {"from": "Marija Mihova", "to": "Marjan Gushev", "width": 2}, {"from": "Dejan Gjorgjevikj", "to": "Eftim Zdravevski", "width": 5}, {"from": "Dejan Gjorgjevikj", "to": "Sashko Ristov", "width": 2}, {"from": "Dejan Gjorgjevikj", "to": "Petre Lameski", "width": 5}, {"from": "Dejan Gjorgjevikj", "to": "Ivan Chorbev", "width": 10}, {"from": "Dejan Gjorgjevikj", "to": "Bojana Koteska", "width": 2}, {"from": "Dejan Gjorgjevikj", "to": "Anastas Mishev", "width": 2}, {"from": "Dejan Gjorgjevikj", "to": "Andrea Kulakov", "width": 6}, {"from": "Dejan Gjorgjevikj", "to": "Ana Madevska Bogdanova", "width": 3}, {"from": "Dejan Gjorgjevikj", "to": "Vesna Dimitrova", "width": 2}, {"from": "Dejan Gjorgjevikj", "to": "Ivica Dimitrovski", "width": 10}, {"from": "Dejan Gjorgjevikj", "to": "Gjorgji Madzarov", "width": 38}, {"from": "Dejan Gjorgjevikj", "to": "Tomche Delev", "width": 14}, {"from": "Dejan Gjorgjevikj", "to": "Dragan Mihajlov", "width": 5}, {"from": "Dejan Gjorgjevikj", "to": "Suzana Loshkovska", "width": 4}, {"from": "Dejan Gjorgjevikj", "to": "Ivan Kitanovski", "width": 3}, {"from": "Dejan Gjorgjevikj", "to": "Natasha Ilievska", "width": 2}, {"from": "Dejan Gjorgjevikj", "to": "Marjan Gushev", "width": 2}, {"from": "Dejan Gjorgjevikj", "to": "Katarina Trojachanec Dineva", "width": 2}, {"from": "Dejan Gjorgjevikj", "to": "Verica Bakeva", "width": 2}, {"from": "Riste Stojanov", "to": "Eftim Zdravevski", "width": 5}, {"from": "Riste Stojanov", "to": "Petre Lameski", "width": 2}, {"from": "Riste Stojanov", "to": "Ivan Chorbev", "width": 2}, {"from": "Riste Stojanov", "to": "Gjorgji Madzarov", "width": 2}, {"from": "Dancho Davchev", "to": "Ivan Chorbev", "width": 2}, {"from": "Dancho Davchev", "to": "Andreja Naumoski", "width": 3}, {"from": "Dancho Davchev", "to": "Georgina Mircheva", "width": 2}, {"from": "Dancho Davchev", "to": "Andrea Kulakov", "width": 3}, {"from": "Dancho Davchev", "to": "Kosta Mitreski", "width": 9}, {"from": "Kosta Mitreski", "to": "Eftim Zdravevski", "width": 4}, {"from": "Kosta Mitreski", "to": "Petre Lameski", "width": 4}, {"from": "Kosta Mitreski", "to": "Ivan Chorbev", "width": 3}, {"from": "Kosta Mitreski", "to": "Andreja Naumoski", "width": 53}, {"from": "Kosta Mitreski", "to": "Bojana Koteska", "width": 2}, {"from": "Kosta Mitreski", "to": "Anastas Mishev", "width": 2}, {"from": "Kosta Mitreski", "to": "Georgina Mircheva", "width": 2}, {"from": "Kosta Mitreski", "to": "Andrea Kulakov", "width": 2}, {"from": "Kosta Mitreski", "to": "Ana Madevska Bogdanova", "width": 2}, {"from": "Kosta Mitreski", "to": "Vesna Dimitrova", "width": 2}, {"from": "Kosta Mitreski", "to": "Ivica Dimitrovski", "width": 2}, {"from": "Kosta Mitreski", "to": "Verica Bakeva", "width": 2}, {"from": "Kosta Mitreski", "to": "Vesna Dimitrievska Ristovska", "width": 2}, {"from": "Kosta Mitreski", "to": "Ivan Kitanovski", "width": 2}, {"from": "Kosta Mitreski", "to": "Kiril Kjiroski", "width": 2}, {"from": "Kosta Mitreski", "to": "Hristina Mihajloska", "width": 2}, {"from": "Kosta Mitreski", "to": "Vladimir Trajkovikj", "width": 2}, {"from": "Biljana Stojkoska", "to": "Eftim Zdravevski", "width": 2}, {"from": "Biljana Stojkoska", "to": "Petre Lameski", "width": 2}, {"from": "Biljana Stojkoska", "to": "Andrea Kulakov", "width": 2}, {"from": "Biljana Stojkoska", "to": "Mile Jovanov", "width": 5}, {"from": "Biljana Stojkoska", "to": "Jovan Kalajdjieski", "width": 3}, {"from": "Vesna Dimitrova", "to": "Sashko Ristov", "width": 3}, {"from": "Vesna Dimitrova", "to": "Ivan Chorbev", "width": 5}, {"from": "Vesna Dimitrova", "to": "Bojana Koteska", "width": 4}, {"from": "Vesna Dimitrova", "to": "Anastas Mishev", "width": 4}, {"from": "Vesna Dimitrova", "to": "Andrea Kulakov", "width": 3}, {"from": "Vesna Dimitrova", "to": "Ana Madevska Bogdanova", "width": 4}, {"from": "Vesna Dimitrova", "to": "Verica Bakeva", "width": 20}, {"from": "Vesna Dimitrova", "to": "Hristina Mihajloska", "width": 12}, {"from": "Vesna Dimitrova", "to": "Jovana Dobreva", "width": 12}, {"from": "Vesna Dimitrova", "to": "Natasha Ilievska", "width": 10}, {"from": "Vesna Dimitrova", "to": "Stefan Andonov", "width": 8}, {"from": "Vesna Dimitrova", "to": "Aleksandra Popovska Mitrovikj", "width": 7}, {"from": "Vesna Dimitrova", "to": "Ivica Dimitrovski", "width": 6}, {"from": "Vesna Dimitrova", "to": "Ivan Kitanovski", "width": 3}, {"from": "Vesna Dimitrova", "to": "Boban Joksimoski", "width": 3}, {"from": "Vesna Dimitrova", "to": "Aleksandar Stojmenski", "width": 3}, {"from": "Vesna Dimitrova", "to": "Boro Jakimovski", "width": 3}, {"from": "Vesna Dimitrova", "to": "Ljupcho Antovski", "width": 3}, {"from": "Vesna Dimitrova", "to": "Suzana Loshkovska", "width": 2}, {"from": "Vesna Dimitrova", "to": "Gjorgji Madzarov", "width": 2}, {"from": "Vesna Dimitrova", "to": "Zhaneta Popeska", "width": 2}, {"from": "Vesna Dimitrova", "to": "Vesna Dimitrievska Ristovska", "width": 2}, {"from": "Vesna Dimitrova", "to": "Kiril Kjiroski", "width": 2}, {"from": "Vesna Dimitrova", "to": "Dimitar Kitanovski", "width": 2}, {"from": "Vesna Dimitrova", "to": "Simona Samardjiska", "width": 2}, {"from": "Ivica Dimitrovski", "to": "Petre Lameski", "width": 2}, {"from": "Ivica Dimitrovski", "to": "Ivan Chorbev", "width": 12}, {"from": "Ivica Dimitrovski", "to": "Bojana Koteska", "width": 3}, {"from": "Ivica Dimitrovski", "to": "Anastas Mishev", "width": 3}, {"from": "Ivica Dimitrovski", "to": "Andrea Kulakov", "width": 3}, {"from": "Ivica Dimitrovski", "to": "Ana Madevska Bogdanova", "width": 3}, {"from": "Ivica Dimitrovski", "to": "Ivan Kitanovski", "width": 36}, {"from": "Ivica Dimitrovski", "to": "Suzana Loshkovska", "width": 24}, {"from": "Ivica Dimitrovski", "to": "Gjorgji Madzarov", "width": 22}, {"from": "Ivica Dimitrovski", "to": "Katarina Trojachanec Dineva", "width": 8}, {"from": "Ivica Dimitrovski", "to": "Dragan Mihajlov", "width": 4}, {"from": "Ivica Dimitrovski", "to": "Natasha Ilievska", "width": 2}, {"from": "Ivica Dimitrovski", "to": "Verica Bakeva", "width": 2}, {"from": "Ivica Dimitrovski", "to": "Vesna Dimitrievska Ristovska", "width": 2}, {"from": "Ivica Dimitrovski", "to": "Kiril Kjiroski", "width": 2}, {"from": "Ivica Dimitrovski", "to": "Hristina Mihajloska", "width": 2}, {"from": "Ivica Dimitrovski", "to": "Aleksandar Stojmenski", "width": 2}, {"from": "Ivica Dimitrovski", "to": "Tomche Delev", "width": 2}, {"from": "Ivica Dimitrovski", "to": "Vlatko Spasev", "width": 2}, {"from": "Natasha Ilievska", "to": "Bojana Koteska", "width": 2}, {"from": "Natasha Ilievska", "to": "Anastas Mishev", "width": 2}, {"from": "Natasha Ilievska", "to": "Andrea Kulakov", "width": 2}, {"from": "Natasha Ilievska", "to": "Ana Madevska Bogdanova", "width": 2}, {"from": "Natasha Ilievska", "to": "Hristina Mihajloska", "width": 4}, {"from": "Natasha Ilievska", "to": "Ivan Kitanovski", "width": 2}, {"from": "Natasha Ilievska", "to": "Verica Bakeva", "width": 8}, {"from": "Natasha Ilievska", "to": "Gjorgji Madzarov", "width": 2}, {"from": "Natasha Ilievska", "to": "Suzana Loshkovska", "width": 2}, {"from": "Natasha Ilievska", "to": "Stefan Andonov", "width": 2}, {"from": "Natasha Ilievska", "to": "Jovana Dobreva", "width": 2}, {"from": "Natasha Ilievska", "to": "Smilka Janeska Sarkanjac", "width": 2}, {"from": "Ivan Kitanovski", "to": "Ivan Chorbev", "width": 2}, {"from": "Ivan Kitanovski", "to": "Bojana Koteska", "width": 3}, {"from": "Ivan Kitanovski", "to": "Anastas Mishev", "width": 3}, {"from": "Ivan Kitanovski", "to": "Andrea Kulakov", "width": 3}, {"from": "Ivan Kitanovski", "to": "Ana Madevska Bogdanova", "width": 3}, {"from": "Ivan Kitanovski", "to": "Hristina Mihajloska", "width": 2}, {"from": "Ivan Kitanovski", "to": "Suzana Loshkovska", "width": 22}, {"from": "Ivan Kitanovski", "to": "Katarina Trojachanec Dineva", "width": 8}, {"from": "Ivan Kitanovski", "to": "Gjorgji Madzarov", "width": 4}, {"from": "Ivan Kitanovski", "to": "Verica Bakeva", "width": 2}, {"from": "Ivan Kitanovski", "to": "Vesna Dimitrievska Ristovska", "width": 2}, {"from": "Ivan Kitanovski", "to": "Kiril Kjiroski", "width": 2}, {"from": "Ivan Kitanovski", "to": "Vlatko Spasev", "width": 2}, {"from": "Bojana Koteska", "to": "Sashko Ristov", "width": 7}, {"from": "Bojana Koteska", "to": "Ivan Chorbev", "width": 2}, {"from": "Bojana Koteska", "to": "Anastas Mishev", "width": 45}, {"from": "Bojana Koteska", "to": "Monika Simjanoska", "width": 26}, {"from": "Bojana Koteska", "to": "Ana Madevska Bogdanova", "width": 25}, {"from": "Bojana Koteska", "to": "Magdalena Kostoska", "width": 17}, {"from": "Bojana Koteska", "to": "Nevena Ackovska", "width": 10}, {"from": "Bojana Koteska", "to": "Boro Jakimovski", "width": 5}, {"from": "Bojana Koteska", "to": "Goran Velinov", "width": 5}, {"from": "Bojana Koteska", "to": "Andrea Kulakov", "width": 4}, {"from": "Bojana Koteska", "to": "Vladimir Trajkovikj", "width": 4}, {"from": "Bojana Koteska", "to": "Aleksandar Stojmenski", "width": 3}, {"from": "Bojana Koteska", "to": "Goce Armenski", "width": 3}, {"from": "Bojana Koteska", "to": "Margita Kon-Popovska", "width": 3}, {"from": "Bojana Koteska", "to": "Suzana Loshkovska", "width": 2}, {"from": "Bojana Koteska", "to": "Gjorgji Madzarov", "width": 2}, {"from": "Bojana Koteska", "to": "Zhaneta Popeska", "width": 2}, {"from": "Bojana Koteska", "to": "Verica Bakeva", "width": 2}, {"from": "Bojana Koteska", "to": "Vesna Dimitrievska Ristovska", "width": 2}, {"from": "Bojana Koteska", "to": "Kiril Kjiroski", "width": 2}, {"from": "Bojana Koteska", "to": "Hristina Mihajloska", "width": 2}, {"from": "Bojana Koteska", "to": "Marjan Gushev", "width": 2}, {"from": "Bojana Koteska", "to": "Mile Jovanov", "width": 2}, {"from": "Andrea Kulakov", "to": "Eftim Zdravevski", "width": 37}, {"from": "Andrea Kulakov", "to": "Petre Lameski", "width": 41}, {"from": "Andrea Kulakov", "to": "Ivan Chorbev", "width": 4}, {"from": "Andrea Kulakov", "to": "Andreja Naumoski", "width": 9}, {"from": "Andrea Kulakov", "to": "Anastas Mishev", "width": 4}, {"from": "Andrea Kulakov", "to": "Georgina Mircheva", "width": 2}, {"from": "Andrea Kulakov", "to": "Vladimir Trajkovikj", "width": 5}, {"from": "Andrea Kulakov", "to": "Ana Madevska Bogdanova", "width": 3}, {"from": "Andrea Kulakov", "to": "Boro Jakimovski", "width": 3}, {"from": "Andrea Kulakov", "to": "Suzana Loshkovska", "width": 2}, {"from": "Andrea Kulakov", "to": "Gjorgji Madzarov", "width": 2}, {"from": "Andrea Kulakov", "to": "Verica Bakeva", "width": 2}, {"from": "Andrea Kulakov", "to": "Vesna Dimitrievska Ristovska", "width": 2}, {"from": "Andrea Kulakov", "to": "Kiril Kjiroski", "width": 2}, {"from": "Andrea Kulakov", "to": "Hristina Mihajloska", "width": 2}, {"from": "Andrea Kulakov", "to": "Zhaneta Popeska", "width": 2}, {"from": "Andrea Kulakov", "to": "Goran Velinov", "width": 2}, {"from": "Andrea Kulakov", "to": "Sonja Gievska", "width": 2}, {"from": "Suzana Loshkovska", "to": "Ivan Chorbev", "width": 3}, {"from": "Suzana Loshkovska", "to": "Anastas Mishev", "width": 2}, {"from": "Suzana Loshkovska", "to": "Ana Madevska Bogdanova", "width": 2}, {"from": "Suzana Loshkovska", "to": "Gjorgji Madzarov", "width": 3}, {"from": "Suzana Loshkovska", "to": "Katarina Trojachanec Dineva", "width": 10}, {"from": "Suzana Loshkovska", "to": "Vladimir Trajkovikj", "width": 2}, {"from": "Ana Madevska Bogdanova", "to": "Sashko Ristov", "width": 2}, {"from": "Ana Madevska Bogdanova", "to": "Ivan Chorbev", "width": 3}, {"from": "Ana Madevska Bogdanova", "to": "Anastas Mishev", "width": 4}, {"from": "Ana Madevska Bogdanova", "to": "Nevena Ackovska", "width": 12}, {"from": "Ana Madevska Bogdanova", "to": "Monika Simjanoska", "width": 26}, {"from": "Ana Madevska Bogdanova", "to": "Magdalena Kostoska", "width": 15}, {"from": "Ana Madevska Bogdanova", "to": "Emil Stankov", "width": 10}, {"from": "Ana Madevska Bogdanova", "to": "Mile Jovanov", "width": 10}, {"from": "Ana Madevska Bogdanova", "to": "Vladimir Trajkovikj", "width": 5}, {"from": "Ana Madevska Bogdanova", "to": "Marjan Gushev", "width": 4}, {"from": "Ana Madevska Bogdanova", "to": "Zhaneta Popeska", "width": 3}, {"from": "Ana Madevska Bogdanova", "to": "Kiril Kjiroski", "width": 3}, {"from": "Ana Madevska Bogdanova", "to": "Gjorgji Madzarov", "width": 2}, {"from": "Ana Madevska Bogdanova", "to": "Verica Bakeva", "width": 2}, {"from": "Ana Madevska Bogdanova", "to": "Vesna Dimitrievska Ristovska", "width": 2}, {"from": "Ana Madevska Bogdanova", "to": "Hristina Mihajloska", "width": 2}, {"from": "Ana Madevska Bogdanova", "to": "Katerina Zdravkova", "width": 2}, {"from": "Gjorgji Madzarov", "to": "Eftim Zdravevski", "width": 2}, {"from": "Gjorgji Madzarov", "to": "Petre Lameski", "width": 3}, {"from": "Gjorgji Madzarov", "to": "Ivan Chorbev", "width": 7}, {"from": "Gjorgji Madzarov", "to": "Anastas Mishev", "width": 2}, {"from": "Gjorgji Madzarov", "to": "Tomche Delev", "width": 7}, {"from": "Gjorgji Madzarov", "to": "Sonja Gievska", "width": 3}, {"from": "Gjorgji Madzarov", "to": "Stefan Andonov", "width": 3}, {"from": "Gjorgji Madzarov", "to": "Katarina Trojachanec Dineva", "width": 2}, {"from": "Anastas Mishev", "to": "Sashko Ristov", "width": 2}, {"from": "Anastas Mishev", "to": "Ivan Chorbev", "width": 2}, {"from": "Anastas Mishev", "to": "Vojdan Kjorveziroski", "width": 8}, {"from": "Anastas Mishev", "to": "Boro Jakimovski", "width": 6}, {"from": "Anastas Mishev", "to": "Vladimir Trajkovikj", "width": 3}, {"from": "Anastas Mishev", "to": "Monika Simjanoska", "width": 3}, {"from": "Anastas Mishev", "to": "Marjan Gushev", "width": 3}, {"from": "Anastas Mishev", "to": "Goran Velinov", "width": 2}, {"from": "Anastas Mishev", "to": "Vangel Ajanovski", "width": 2}, {"from": "Anastas Mishev", "to": "Margita Kon-Popovska", "width": 2}, {"from": "Anastas Mishev", "to": "Goce Armenski", "width": 2}, {"from": "Anastas Mishev", "to": "Zhaneta Popeska", "width": 2}, {"from": "Anastas Mishev", "to": "Verica Bakeva", "width": 2}, {"from": "Anastas Mishev", "to": "Vesna Dimitrievska Ristovska", "width": 2}, {"from": "Anastas Mishev", "to": "Kiril Kjiroski", "width": 2}, {"from": "Anastas Mishev", "to": "Hristina Mihajloska", "width": 2}, {"from": "Jovana Dobreva", "to": "Monika Simjanoska", "width": 2}, {"from": "Jovana Dobreva", "to": "Hristina Mihajloska", "width": 3}, {"from": "Jovana Dobreva", "to": "Verica Bakeva", "width": 3}, {"from": "Jovana Dobreva", "to": "Stefan Andonov", "width": 6}, {"from": "Jovana Dobreva", "to": "Aleksandra Popovska Mitrovikj", "width": 3}, {"from": "Monika Simjanoska", "to": "Sashko Ristov", "width": 21}, {"from": "Monika Simjanoska", "to": "Nevena Ackovska", "width": 11}, {"from": "Monika Simjanoska", "to": "Magdalena Kostoska", "width": 13}, {"from": "Monika Simjanoska", "to": "Zhaneta Popeska", "width": 6}, {"from": "Monika Simjanoska", "to": "Marjan Gushev", "width": 5}, {"from": "Monika Simjanoska", "to": "Vladimir Trajkovikj", "width": 4}, {"from": "Monika Simjanoska", "to": "Aleksandar Stojmenski", "width": 3}, {"from": "Monika Simjanoska", "to": "Frosina Stojanovska", "width": 2}, {"from": "Eftim Zdravevski", "to": "Petre Lameski", "width": 112}, {"from": "Eftim Zdravevski", "to": "Ivan Chorbev", "width": 27}, {"from": "Eftim Zdravevski", "to": "Vladimir Trajkovikj", "width": 8}, {"from": "Eftim Zdravevski", "to": "Sonja Gievska", "width": 5}, {"from": "Eftim Zdravevski", "to": "Boro Jakimovski", "width": 4}, {"from": "Eftim Zdravevski", "to": "Boban Joksimoski", "width": 3}, {"from": "Eftim Zdravevski", "to": "Jovan Kalajdjieski", "width": 2}, {"from": "Eftim Zdravevski", "to": "Vladislav Bidikov", "width": 2}, {"from": "Eftim Zdravevski", "to": "Kiril Kjiroski", "width": 2}, {"from": "Eftim Zdravevski", "to": "Aleksandar Stojmenski", "width": 2}, {"from": "Eftim Zdravevski", "to": "Martina Toshevska", "width": 2}, {"from": "Eftim Zdravevski", "to": "Frosina Stojanovska", "width": 2}, {"from": "Dejan Spasov", "to": "Sashko Ristov", "width": 6}, {"from": "Dejan Spasov", "to": "Nevena Ackovska", "width": 2}, {"from": "Dejan Spasov", "to": "Mile Jovanov", "width": 2}, {"from": "Dejan Spasov", "to": "Goce Armenski", "width": 4}, {"from": "Dejan Spasov", "to": "Marjan Gushev", "width": 2}, {"from": "Dejan Spasov", "to": "Emil Stankov", "width": 2}, {"from": "Sashko Ristov", "to": "Magdalena Kostoska", "width": 43}, {"from": "Sashko Ristov", "to": "Goce Armenski", "width": 19}, {"from": "Sashko Ristov", "to": "Nenad Anchev", "width": 19}, {"from": "Sashko Ristov", "to": "Marjan Gushev", "width": 16}, {"from": "Sashko Ristov", "to": "Nevena Ackovska", "width": 13}, {"from": "Sashko Ristov", "to": "Ivan Chorbev", "width": 6}, {"from": "Sashko Ristov", "to": "Boro Jakimovski", "width": 5}, {"from": "Sashko Ristov", "to": "Kiril Kjiroski", "width": 4}, {"from": "Sashko Ristov", "to": "Mile Jovanov", "width": 3}, {"from": "Sashko Ristov", "to": "Zhaneta Popeska", "width": 2}, {"from": "Sashko Ristov", "to": "Emil Stankov", "width": 2}, {"from": "Sashko Ristov", "to": "Katerina Zdravkova", "width": 2}, {"from": "Petre Lameski", "to": "Ivan Chorbev", "width": 25}, {"from": "Petre Lameski", "to": "Vladimir Trajkovikj", "width": 7}, {"from": "Petre Lameski", "to": "Sonja Gievska", "width": 6}, {"from": "Petre Lameski", "to": "Boban Joksimoski", "width": 5}, {"from": "Petre Lameski", "to": "Boro Jakimovski", "width": 4}, {"from": "Petre Lameski", "to": "Bojan Ilijoski", "width": 4}, {"from": "Petre Lameski", "to": "Katarina Trojachanec Dineva", "width": 3}, {"from": "Petre Lameski", "to": "Jovan Kalajdjieski", "width": 2}, {"from": "Petre Lameski", "to": "Vladislav Bidikov", "width": 2}, {"from": "Petre Lameski", "to": "Kiril Kjiroski", "width": 2}, {"from": "Petre Lameski", "to": "Aleksandar Stojmenski", "width": 2}, {"from": "Petre Lameski", "to": "Martina Toshevska", "width": 2}, {"from": "Petre Lameski", "to": "Frosina Stojanovska", "width": 2}, {"from": "Petre Lameski", "to": "Andreja Naumoski", "width": 2}, {"from": "Petre Lameski", "to": "Panche Ribarski", "width": 2}, {"from": "Petre Lameski", "to": "Biljana Tojtovska", "width": 2}, {"from": "Ivan Chorbev", "to": "Dragan Mihajlov", "width": 21}, {"from": "Ivan Chorbev", "to": "Boban Joksimoski", "width": 20}, {"from": "Ivan Chorbev", "to": "Aleksandar Stojmenski", "width": 15}, {"from": "Ivan Chorbev", "to": "Dimitar Kitanovski", "width": 6}, {"from": "Ivan Chorbev", "to": "Boro Jakimovski", "width": 6}, {"from": "Ivan Chorbev", "to": "Vladimir Trajkovikj", "width": 5}, {"from": "Ivan Chorbev", "to": "Kiril Kjiroski", "width": 3}, {"from": "Ivan Chorbev", "to": "Marjan Gushev", "width": 3}, {"from": "Ivan Chorbev", "to": "Katerina Zdravkova", "width": 3}, {"from": "Ivan Chorbev", "to": "Verica Bakeva", "width": 2}, {"from": "Ivan Chorbev", "to": "Vesna Dimitrievska Ristovska", "width": 2}, {"from": "Ivan Chorbev", "to": "Hristina Mihajloska", "width": 2}, {"from": "Ivan Chorbev", "to": "Vladislav Bidikov", "width": 2}, {"from": "Ivan Chorbev", "to": "Magdalena Kostoska", "width": 2}, {"from": "Andreja Naumoski", "to": "Georgina Mircheva", "width": 7}, {"from": "Andreja Naumoski", "to": "Vladimir Trajkovikj", "width": 2}, {"from": "Nevena Ackovska", "to": "Magdalena Kostoska", "width": 18}, {"from": "Nevena Ackovska", "to": "Mile Jovanov", "width": 15}, {"from": "Nevena Ackovska", "to": "Emil Stankov", "width": 10}, {"from": "Nevena Ackovska", "to": "Bojan Ilijoski", "width": 6}, {"from": "Nevena Ackovska", "to": "Vladimir Trajkovikj", "width": 3}, {"from": "Nevena Ackovska", "to": "Aleksandar Stojmenski", "width": 3}, {"from": "Nevena Ackovska", "to": "Frosina Stojanovska", "width": 3}, {"from": "Nevena Ackovska", "to": "Martina Toshevska", "width": 2}, {"from": "Nevena Ackovska", "to": "Katerina Zdravkova", "width": 2}, {"from": "Nevena Ackovska", "to": "Zhaneta Popeska", "width": 2}, {"from": "Nevena Ackovska", "to": "Vladislav Bidikov", "width": 2}, {"from": "Katerina Zdravkova", "to": "Boban Joksimoski", "width": 5}, {"from": "Katerina Zdravkova", "to": "Boro Jakimovski", "width": 5}, {"from": "Katerina Zdravkova", "to": "Dragan Mihajlov", "width": 4}, {"from": "Boro Jakimovski", "to": "Goran Velinov", "width": 18}, {"from": "Boro Jakimovski", "to": "Margita Kon-Popovska", "width": 9}, {"from": "Boro Jakimovski", "to": "Vladislav Bidikov", "width": 3}, {"from": "Boro Jakimovski", "to": "Kiril Kjiroski", "width": 3}, {"from": "Boro Jakimovski", "to": "Magdalena Kostoska", "width": 3}, {"from": "Boro Jakimovski", "to": "Vojdan Kjorveziroski", "width": 2}, {"from": "Boro Jakimovski", "to": "Vladimir Trajkovikj", "width": 2}, {"from": "Boro Jakimovski", "to": "Dimitar Kitanovski", "width": 2}, {"from": "Boro Jakimovski", "to": "Aleksandar Stojmenski", "width": 2}, {"from": "Boro Jakimovski", "to": "Verica Bakeva", "width": 2}, {"from": "Boro Jakimovski", "to": "Nenad Anchev", "width": 2}, {"from": "Boro Jakimovski", "to": "Bojan Ilijoski", "width": 2}, {"from": "Mile Jovanov", "to": "Emil Stankov", "width": 47}, {"from": "Mile Jovanov", "to": "Bojan Ilijoski", "width": 5}, {"from": "Mile Jovanov", "to": "Marjan Gushev", "width": 4}, {"from": "Mile Jovanov", "to": "Martina Toshevska", "width": 3}, {"from": "Mile Jovanov", "to": "Metodija Jancheski", "width": 3}, {"from": "Mile Jovanov", "to": "Goce Armenski", "width": 2}, {"from": "Mile Jovanov", "to": "Margita Kon-Popovska", "width": 2}, {"from": "Mile Jovanov", "to": "Vladislav Bidikov", "width": 2}, {"from": "Hristina Mihajloska", "to": "Simona Samardjiska", "width": 9}, {"from": "Hristina Mihajloska", "to": "Verica Bakeva", "width": 5}, {"from": "Hristina Mihajloska", "to": "Stefan Andonov", "width": 3}, {"from": "Hristina Mihajloska", "to": "Vesna Dimitrievska Ristovska", "width": 2}, {"from": "Hristina Mihajloska", "to": "Kiril Kjiroski", "width": 2}, {"from": "Hristina Mihajloska", "to": "Ljupcho Antovski", "width": 2}, {"from": "Goce Armenski", "to": "Ljupcho Antovski", "width": 10}, {"from": "Goce Armenski", "to": "Marjan Gushev", "width": 8}, {"from": "Goce Armenski", "to": "Magdalena Kostoska", "width": 5}, {"from": "Goce Armenski", "to": "Bojan Ilijoski", "width": 2}, {"from": "Goce Armenski", "to": "Emil Stankov", "width": 2}, {"from": "Goce Armenski", "to": "Vangel Ajanovski", "width": 2}, {"from": "Magdalena Kostoska", "to": "Marjan Gushev", "width": 9}, {"from": "Magdalena Kostoska", "to": "Kiril Kjiroski", "width": 8}, {"from": "Magdalena Kostoska", "to": "Aleksandar Stojmenski", "width": 3}, {"from": "Magdalena Kostoska", "to": "Vladimir Trajkovikj", "width": 2}, {"from": "Verica Bakeva", "to": "Aleksandra Popovska Mitrovikj", "width": 7}, {"from": "Verica Bakeva", "to": "Vesna Dimitrievska Ristovska", "width": 2}, {"from": "Verica Bakeva", "to": "Kiril Kjiroski", "width": 2}, {"from": "Verica Bakeva", "to": "Vladimir Trajkovikj", "width": 2}, {"from": "Verica Bakeva", "to": "Stefan Andonov", "width": 2}, {"from": "Vangel Ajanovski", "to": "Margita Kon-Popovska", "width": 5}, {"from": "Vangel Ajanovski", "to": "Ljupcho Antovski", "width": 4}, {"from": "Goran Velinov", "to": "Margita Kon-Popovska", "width": 21}, {"from": "Goran Velinov", "to": "Zhaneta Popeska", "width": 2}, {"from": "Goran Velinov", "to": "Nenad Anchev", "width": 2}, {"from": "Goran Velinov", "to": "Bojan Ilijoski", "width": 2}, {"from": "Goran Velinov", "to": "Jovan Kalajdjieski", "width": 2}, {"from": "Ljupcho Antovski", "to": "Panche Ribarski", "width": 10}, {"from": "Ljupcho Antovski", "to": "Marjan Gushev", "width": 5}, {"from": "Sonja Gievska", "to": "Martina Toshevska", "width": 5}, {"from": "Sonja Gievska", "to": "Frosina Stojanovska", "width": 4}, {"from": "Sonja Gievska", "to": "Jovan Kalajdjieski", "width": 2}, {"from": "Boban Joksimoski", "to": "Dragan Mihajlov", "width": 9}, {"from": "Boban Joksimoski", "to": "Aleksandar Stojmenski", "width": 7}, {"from": "Boban Joksimoski", "to": "Vladimir Trajkovikj", "width": 2}, {"from": "Aleksandar Stojmenski", "to": "Dragan Mihajlov", "width": 4}, {"from": "Aleksandar Stojmenski", "to": "Marjan Gushev", "width": 3}, {"from": "Aleksandar Stojmenski", "to": "Dimitar Kitanovski", "width": 3}, {"from": "Aleksandar Stojmenski", "to": "Vladimir Trajkovikj", "width": 2}, {"from": "Zhaneta Popeska", "to": "Bojan Ilijoski", "width": 7}, {"from": "Zhaneta Popeska", "to": "Emil Stankov", "width": 2}, {"from": "Bojan Ilijoski", "to": "Emil Stankov", "width": 6}, {"from": "Bojan Ilijoski", "to": "Katarina Trojachanec Dineva", "width": 3}, {"from": "Bojan Ilijoski", "to": "Panche Ribarski", "width": 3}, {"from": "Bojan Ilijoski", "to": "Biljana Tojtovska", "width": 3}, {"from": "Bojan Ilijoski", "to": "Metodija Jancheski", "width": 2}, {"from": "Vladimir Trajkovikj", "to": "Vladislav Bidikov", "width": 2}, {"from": "Vladimir Trajkovikj", "to": "Kiril Kjiroski", "width": 2}, {"from": "Kiril Kjiroski", "to": "Vladislav Bidikov", "width": 3}, {"from": "Kiril Kjiroski", "to": "Marjan Gushev", "width": 3}, {"from": "Kiril Kjiroski", "to": "Vesna Dimitrievska Ristovska", "width": 2}, {"from": "Marjan Gushev", "to": "Nenad Anchev", "width": 5}, {"from": "Marjan Gushev", "to": "Emil Stankov", "width": 2}, {"from": "Emil Stankov", "to": "Petar Sekoluski", "width": 3}, {"from": "Emil Stankov", "to": "Vesna Dimitrievska Ristovska", "width": 2}, {"from": "Emil Stankov", "to": "Metodija Jancheski", "width": 2}, {"from": "Vesna Dimitrievska Ristovska", "to": "Petar Sekoluski", "width": 2}, {"from": "Vojdan Kjorveziroski", "to": "Panche Ribarski", "width": 2}, {"from": "Biljana Tojtovska", "to": "Panche Ribarski", "width": 6}, {"from": "Stefan Andonov", "to": "Aleksandra Popovska Mitrovikj", "width": 3}, {"from": "Frosina Stojanovska", "to": "Martina Toshevska", "width": 7}, {"from": "Frosina Stojanovska", "to": "Jovan Kalajdjieski", "width": 4}, {"from": "Jovan Kalajdjieski", "to": "Martina Toshevska", "width": 4}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {
+    "configure": {
+        "enabled": true,
+        "filter": [
+            "physics"
+        ]
+    },
+    "edges": {
+        "color": {
+            "inherit": false
+        },
+        "smooth": {
+            "enabled": true,
+            "type": "dynamic"
+        }
+    },
+    "interaction": {
+        "dragNodes": true,
+        "hideEdgesOnDrag": false,
+        "hideNodesOnDrag": false
+    },
+    "physics": {
+        "enabled": false,
+        "stabilization": {
+            "enabled": true,
+            "fit": true,
+            "iterations": 1000,
+            "onlyDynamicEdges": false,
+            "updateInterval": 50
+        }
+    }
+};
+
+                  
+
+
+                  
+                  // if this network requires displaying the configure window,
+                  // put it in its div
+                  options.configure["container"] = document.getElementById("config");
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+                    network.on("selectNode", neighbourhoodHighlight);
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>
